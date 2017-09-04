@@ -383,22 +383,29 @@ static void mainloop(cairo_surface_t * pngsurf)
 }
 
 int main(int argc, char ** argv) {
+    char * sourcefile = NULL;
     int c;
-    while ((c = getopt(argc, argv, "w")) != -1) {
+    while ((c = getopt(argc, argv, "wi:")) != -1) {
         switch(c)
         {
             case 'w':
                 display_window = 1;
                 break;
+            case 'i':
+                sourcefile = optarg;
+                break;
             default:
                 return 1;
         }
     }
+    if(sourcefile == NULL)
+    {
+        fprintf(stderr, "The -i option is required\n");
+        return 1;
+    }
+
     cairo_surface_t * pngsurf;
-    if(argc == 1)
-        pngsurf = cairo_image_surface_create_from_png("mona.png");
-    else
-        pngsurf = cairo_image_surface_create_from_png(argv[1]);
+    pngsurf = cairo_image_surface_create_from_png(sourcefile);
 
     WIDTH = cairo_image_surface_get_width(pngsurf);
     HEIGHT = cairo_image_surface_get_height(pngsurf);
