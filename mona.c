@@ -1,13 +1,5 @@
 // written by nick welch <nick@incise.org>.  author disclaims copyright.
 
-#ifndef NUM_POINTS
-#define NUM_POINTS 6
-#endif
-
-#ifndef NUM_SHAPES
-#define NUM_SHAPES 40
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +24,9 @@
 
 int WIDTH;
 int HEIGHT;
+
+int NUM_POINTS = 6;
+int NUM_SHAPES = 40;
 
 int display_window = 0;
 char * png_filename = NULL;
@@ -76,11 +71,11 @@ typedef struct {
 
 typedef struct {
     double r, g, b, a;
-    point_t points[NUM_POINTS];
+    point_t * points;
 } shape_t;
 
-shape_t dna_best[NUM_SHAPES];
-shape_t dna_test[NUM_SHAPES];
+shape_t * dna_best;
+shape_t * dna_test;
 
 int mutated_shape;
 
@@ -108,6 +103,7 @@ void init_dna(shape_t * dna)
 {
     for(int i = 0; i < NUM_SHAPES; i++)
     {
+        dna[i].points = calloc(NUM_POINTS, sizeof(point_t));
         for(int j = 0; j < NUM_POINTS; j++)
         {
             dna[i].points[j].x = RANDDOUBLE(WIDTH);
@@ -270,13 +266,32 @@ void copy_surf_to(cairo_surface_t * surf, cairo_t * cr)
     cairo_paint(cr);
 }
 
+void copy_shape(shape_t * from_shape, shape_t * to_shape)
+{
+    to_shape->r = from_shape->r;
+    to_shape->g = from_shape->g;
+    to_shape->b = from_shape->b;
+    to_shape->a = from_shape->a;
+    for(int i = 0; i < NUM_POINTS; i++)
+    {
+        to_shape->points[i].x = from_shape->points[i].x;
+        to_shape->points[i].y = from_shape->points[i].y;
+    }
+}
+
 static void mainloop(cairo_surface_t * pngsurf)
 {
     struct timeval start;
     gettimeofday(&start, NULL);
 
+    dna_best = calloc(NUM_SHAPES, sizeof(shape_t));
+    dna_test = calloc(NUM_SHAPES, sizeof(shape_t));
     init_dna(dna_best);
-    memcpy((void *)dna_test, (const void *)dna_best, sizeof(shape_t) * NUM_SHAPES);
+    for (int i = 0; i < NUM_SHAPES; i++)
+    {
+        dna_test[i].points = calloc(NUM_POINTS, sizeof(point_t));
+        copy_shape(&(dna_best[i]), &(dna_test[i]));
+    }
 
     cairo_surface_t * xsurf;
     cairo_t * xcr;
@@ -315,10 +330,10 @@ static void mainloop(cairo_surface_t * pngsurf)
         {
             beststep++;
             // test is good, copy to best
-            dna_best[mutated_shape] = dna_test[mutated_shape];
+            copy_shape(&(dna_test[mutated_shape]), &(dna_best[mutated_shape]));
             if(other_mutated >= 0)
             {
-                dna_best[other_mutated] = dna_test[other_mutated];
+                copy_shape(&(dna_test[other_mutated]), &(dna_best[other_mutated]));
                 if(svg_filename != NULL)
                     draw_dna(dna_test, svg_cr);
             }
@@ -335,9 +350,9 @@ static void mainloop(cairo_surface_t * pngsurf)
         else
         {
             // test sucks, copy best back over test
-            dna_test[mutated_shape] = dna_best[mutated_shape];
+            copy_shape(&(dna_best[mutated_shape]), &(dna_test[mutated_shape]));
             if(other_mutated >= 0)
-                dna_test[other_mutated] = dna_best[other_mutated];
+                copy_shape(&(dna_best[other_mutated]), &(dna_test[other_mutated]));
         }
 
         teststep++;
@@ -404,6 +419,12 @@ int main(int argc, char ** argv) {
     while ((c = getopt(argc, argv, "wi:p:s:")) != -1) {
         switch(c)
         {
+            case 'v':
+                NUM_POINTS = atoi(optarg);
+                break;
+            case 'e':
+                NUM_SHAPES = atoi(optarg);
+                break;
             case 'w':
                 display_window = 1;
                 break;
