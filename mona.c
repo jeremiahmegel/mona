@@ -19,6 +19,7 @@
 #include <limits.h>
 
 #include <cairo.h>
+#include <cairo-svg.h>
 #include <cairo-xlib.h>
 
 #define RANDINT(max) (int)((random() / (double)RAND_MAX) * (max))
@@ -283,6 +284,9 @@ static void mainloop(cairo_surface_t * pngsurf)
             dpy, pixmap, DefaultVisual(dpy, screen), WIDTH, HEIGHT);
     cairo_t * xcr = cairo_create(xsurf);
 #endif
+    cairo_surface_t * svg_surf = cairo_svg_surface_create("mona.svg", WIDTH, HEIGHT);
+    cairo_surface_t * svg_surf2;
+    cairo_t * svg_cr = cairo_create(svg_surf);
 
     cairo_surface_t * test_surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, WIDTH, HEIGHT);
     cairo_t * test_cr = cairo_create(test_surf);
@@ -306,6 +310,7 @@ static void mainloop(cairo_surface_t * pngsurf)
             dna_best[mutated_shape] = dna_test[mutated_shape];
             if(other_mutated >= 0)
                 dna_best[other_mutated] = dna_test[other_mutated];
+                draw_dna(dna_test, svg_cr);
 #ifdef SHOWWINDOW
             copy_surf_to(test_surf, xcr); // also copy to display
             XCopyArea(dpy, pixmap, win, gc,
@@ -344,6 +349,19 @@ static void mainloop(cairo_surface_t * pngsurf)
         if(teststep % 100 == 0)
             printf("Step = %d/%d\nFitness = %0.6f%%\n",
                     beststep, teststep, ((MAX_FITNESS-lowestdiff) / (float)MAX_FITNESS)*100);
+
+        if (teststep % 1000 == 0) {
+            svg_surf2 = cairo_svg_surface_create("mona.svg", WIDTH, HEIGHT);
+            cairo_destroy(svg_cr);
+            svg_cr = cairo_create(svg_surf2);
+            cairo_set_source_surface(svg_cr, cairo_surface_reference(svg_surf), 0, 0);
+            cairo_rectangle(svg_cr, 0, 0, WIDTH, HEIGHT);
+            cairo_fill(svg_cr);
+            cairo_surface_finish(svg_surf);
+            cairo_surface_write_to_png(test_surf, "mona-new.png");
+            cairo_surface_destroy(svg_surf);
+            svg_surf = svg_surf2;
+        }
 #endif
 
 #ifdef SHOWWINDOW
