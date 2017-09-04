@@ -22,6 +22,8 @@
 #include <cairo-svg.h>
 #include <cairo-xlib.h>
 
+#include <X11/Xlib.h>
+
 #define RANDINT(max) (int)((random() / (double)RAND_MAX) * (max))
 #define RANDDOUBLE(max) ((random() / (double)RAND_MAX) * max)
 #define ABS(val) ((val) < 0 ? -(val) : (val))
@@ -31,10 +33,7 @@
 int WIDTH;
 int HEIGHT;
 
-//////////////////////// X11 stuff ////////////////////////
-#ifdef SHOWWINDOW
-
-#include <X11/Xlib.h>
+int display_window = 0;
 
 Display * dpy;
 int screen;
@@ -68,8 +67,6 @@ void x_init(void)
 
     XMapWindow(dpy, win);
 }
-#endif
-//////////////////////// end X11 stuff ////////////////////////
 
 typedef struct {
     double x, y;
@@ -279,11 +276,14 @@ static void mainloop(cairo_surface_t * pngsurf)
     init_dna(dna_best);
     memcpy((void *)dna_test, (const void *)dna_best, sizeof(shape_t) * NUM_SHAPES);
 
-#ifdef SHOWWINDOW
-    cairo_surface_t * xsurf = cairo_xlib_surface_create(
-            dpy, pixmap, DefaultVisual(dpy, screen), WIDTH, HEIGHT);
-    cairo_t * xcr = cairo_create(xsurf);
-#endif
+    cairo_surface_t * xsurf;
+    cairo_t * xcr;
+    if(display_window == 1)
+    {
+        xsurf = cairo_xlib_surface_create(
+                dpy, pixmap, DefaultVisual(dpy, screen), WIDTH, HEIGHT);
+        xcr = cairo_create(xsurf);
+    }
     cairo_surface_t * svg_surf = cairo_svg_surface_create("mona.svg", WIDTH, HEIGHT);
     cairo_surface_t * svg_surf2;
     cairo_t * svg_cr = cairo_create(svg_surf);
@@ -309,15 +309,18 @@ static void mainloop(cairo_surface_t * pngsurf)
             // test is good, copy to best
             dna_best[mutated_shape] = dna_test[mutated_shape];
             if(other_mutated >= 0)
+            {
                 dna_best[other_mutated] = dna_test[other_mutated];
                 draw_dna(dna_test, svg_cr);
-#ifdef SHOWWINDOW
-            copy_surf_to(test_surf, xcr); // also copy to display
-            XCopyArea(dpy, pixmap, win, gc,
-                    0, 0,
-                    WIDTH, HEIGHT,
-                    0, 0);
-#endif
+            }
+            if(display_window == 1)
+            {
+                copy_surf_to(test_surf, xcr); // also copy to display
+                XCopyArea(dpy, pixmap, win, gc,
+                        0, 0,
+                        WIDTH, HEIGHT,
+                        0, 0);
+            }
             lowestdiff = diff;
         }
         else
@@ -364,8 +367,7 @@ static void mainloop(cairo_surface_t * pngsurf)
         }
 #endif
 
-#ifdef SHOWWINDOW
-        if(teststep % 100 == 0 && XPending(dpy))
+        if(display_window == 1 && teststep % 100 == 0 && XPending(dpy))
         {
             XEvent xev;
             XNextEvent(dpy, &xev);
@@ -377,11 +379,21 @@ static void mainloop(cairo_surface_t * pngsurf)
                             xev.xexpose.x, xev.xexpose.y);
             }
         }
-#endif
     }
 }
 
 int main(int argc, char ** argv) {
+    int c;
+    while ((c = getopt(argc, argv, "w")) != -1) {
+        switch(c)
+        {
+            case 'w':
+                display_window = 1;
+                break;
+            default:
+                return 1;
+        }
+    }
     cairo_surface_t * pngsurf;
     if(argc == 1)
         pngsurf = cairo_image_surface_create_from_png("mona.png");
@@ -392,7 +404,10 @@ int main(int argc, char ** argv) {
     HEIGHT = cairo_image_surface_get_height(pngsurf);
 
     srandom(getpid() + time(NULL));
-    x_init();
+    if(display_window == 1)
+    {
+        x_init();
+    }
     mainloop(pngsurf);
 }
 
