@@ -34,6 +34,8 @@ int WIDTH;
 int HEIGHT;
 
 int display_window = 0;
+char * png_filename = NULL;
+char * svg_filename = NULL;
 
 Display * dpy;
 int screen;
@@ -284,9 +286,15 @@ static void mainloop(cairo_surface_t * pngsurf)
                 dpy, pixmap, DefaultVisual(dpy, screen), WIDTH, HEIGHT);
         xcr = cairo_create(xsurf);
     }
-    cairo_surface_t * svg_surf = cairo_svg_surface_create("mona.svg", WIDTH, HEIGHT);
+
+    cairo_surface_t * svg_surf;
     cairo_surface_t * svg_surf2;
-    cairo_t * svg_cr = cairo_create(svg_surf);
+    cairo_t * svg_cr;
+    if(svg_filename != NULL)
+    {
+        svg_surf = cairo_svg_surface_create(svg_filename, WIDTH, HEIGHT);
+        svg_cr = cairo_create(svg_surf);
+    }
 
     cairo_surface_t * test_surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, WIDTH, HEIGHT);
     cairo_t * test_cr = cairo_create(test_surf);
@@ -311,7 +319,8 @@ static void mainloop(cairo_surface_t * pngsurf)
             if(other_mutated >= 0)
             {
                 dna_best[other_mutated] = dna_test[other_mutated];
-                draw_dna(dna_test, svg_cr);
+                if(svg_filename != NULL)
+                    draw_dna(dna_test, svg_cr);
             }
             if(display_window == 1)
             {
@@ -354,16 +363,23 @@ static void mainloop(cairo_surface_t * pngsurf)
                     beststep, teststep, ((MAX_FITNESS-lowestdiff) / (float)MAX_FITNESS)*100);
 
         if (teststep % 1000 == 0) {
-            svg_surf2 = cairo_svg_surface_create("mona.svg", WIDTH, HEIGHT);
-            cairo_destroy(svg_cr);
-            svg_cr = cairo_create(svg_surf2);
-            cairo_set_source_surface(svg_cr, cairo_surface_reference(svg_surf), 0, 0);
-            cairo_rectangle(svg_cr, 0, 0, WIDTH, HEIGHT);
-            cairo_fill(svg_cr);
-            cairo_surface_finish(svg_surf);
-            cairo_surface_write_to_png(test_surf, "mona-new.png");
-            cairo_surface_destroy(svg_surf);
-            svg_surf = svg_surf2;
+            if(svg_filename != NULL)
+            {
+                svg_surf2 = cairo_svg_surface_create(svg_filename, WIDTH, HEIGHT);
+                cairo_destroy(svg_cr);
+                svg_cr = cairo_create(svg_surf2);
+                cairo_set_source_surface(svg_cr, cairo_surface_reference(svg_surf), 0, 0);
+                cairo_rectangle(svg_cr, 0, 0, WIDTH, HEIGHT);
+                cairo_fill(svg_cr);
+                cairo_surface_finish(svg_surf);
+                cairo_surface_destroy(svg_surf);
+                svg_surf = svg_surf2;
+            }
+
+            if(png_filename != NULL)
+            {
+                cairo_surface_write_to_png(test_surf, png_filename);
+            }
         }
 #endif
 
@@ -385,7 +401,7 @@ static void mainloop(cairo_surface_t * pngsurf)
 int main(int argc, char ** argv) {
     char * sourcefile = NULL;
     int c;
-    while ((c = getopt(argc, argv, "wi:")) != -1) {
+    while ((c = getopt(argc, argv, "wi:p:s:")) != -1) {
         switch(c)
         {
             case 'w':
@@ -393,6 +409,12 @@ int main(int argc, char ** argv) {
                 break;
             case 'i':
                 sourcefile = optarg;
+                break;
+            case 'p':
+                png_filename = optarg;
+                break;
+            case 's':
+                svg_filename = optarg;
                 break;
             default:
                 return 1;
