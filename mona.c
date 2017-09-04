@@ -453,8 +453,7 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
-    cairo_surface_t * pngsurf;
-    pngsurf = cairo_image_surface_create_from_png(sourcefile);
+    cairo_surface_t * pngsurf = cairo_image_surface_create_from_png(sourcefile);
 
     WIDTH = cairo_image_surface_get_width(pngsurf);
     HEIGHT = cairo_image_surface_get_height(pngsurf);
