@@ -420,21 +420,27 @@ int main(int argc, char ** argv) {
         switch(c)
         {
             case 'v':
+                // Vertices
                 NUM_POINTS = atoi(optarg);
                 break;
             case 'e':
+                // Elements
                 NUM_SHAPES = atoi(optarg);
                 break;
             case 'w':
+                // Window
                 display_window = 1;
                 break;
             case 'i':
+                // Input
                 sourcefile = optarg;
                 break;
             case 'p':
+                // PNG
                 png_filename = optarg;
                 break;
             case 's':
+                // SVG
                 svg_filename = optarg;
                 break;
             default:
