@@ -416,7 +416,7 @@ static void mainloop(cairo_surface_t * pngsurf)
 int main(int argc, char ** argv) {
     char * sourcefile = NULL;
     int c;
-    while ((c = getopt(argc, argv, "wi:p:s:")) != -1) {
+    while ((c = getopt(argc, argv, "v:e:wi:p:s:")) != -1) {
         switch(c)
         {
             case 'v':
